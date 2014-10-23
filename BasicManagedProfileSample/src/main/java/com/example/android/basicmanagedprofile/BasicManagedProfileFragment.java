@@ -35,8 +35,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import static android.app.admin.DevicePolicyManager.FLAG_TO_MANAGED_PROFILE;
-import static android.app.admin.DevicePolicyManager.FLAG_TO_PRIMARY_USER;
+import static android.app.admin.DevicePolicyManager.FLAG_MANAGED_CAN_ACCESS_PARENT;
+import static android.app.admin.DevicePolicyManager.FLAG_PARENT_CAN_ACCESS_MANAGED;
 
 /**
  * Provides several functions that are available in a managed profile. This includes
@@ -88,17 +88,18 @@ public class BasicManagedProfileFragment extends Fragment
         DevicePolicyManager manager =
             (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
         // Retrieves whether the calculator app is enabled in this profile
-        mCalculatorEnabled = !manager.isApplicationBlocked(
+        mCalculatorEnabled = !manager.isApplicationHidden(
             BasicDeviceAdminReceiver.getComponentName(activity), PACKAGE_NAMES_CALCULATOR[0]);
         // Retrieves whether Chrome is enabled in this profile
         mChromeEnabled = false;
         for (String packageName : PACKAGE_NAMES_CHROME) {
-            if (!manager.isApplicationBlocked(
+            if (!manager.isApplicationHidden(
                     BasicDeviceAdminReceiver.getComponentName(activity), packageName)) {
                 mChromeEnabled = true;
                 return;
             }
-        }
+       }
+
     }
 
     @Override
@@ -176,7 +177,7 @@ public class BasicManagedProfileFragment extends Fragment
             (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
         for (String packageName : packageNames) {
             // This is how you can enable or disable an app in a managed profile.
-            manager.setApplicationBlocked(BasicDeviceAdminReceiver.getComponentName(activity),
+            manager.setApplicationHidden(BasicDeviceAdminReceiver.getComponentName(activity),
                                           packageName, !enabled);
         }
         Toast.makeText(activity, enabled ? "Enabled" : "Disabled", Toast.LENGTH_SHORT).show();
@@ -251,9 +252,9 @@ public class BasicManagedProfileFragment extends Fragment
             filter.addDataType("text/plain");
             filter.addDataType("image/jpeg");
             // This is how you can register an IntentFilter as allowed pattern of Intent forwarding
-            manager.addForwardingIntentFilter(BasicDeviceAdminReceiver.getComponentName(activity),
+            manager.addCrossProfileIntentFilter(BasicDeviceAdminReceiver.getComponentName(activity),
                                               filter,
-                                              FLAG_TO_PRIMARY_USER | FLAG_TO_MANAGED_PROFILE);
+                    FLAG_MANAGED_CAN_ACCESS_PARENT |  FLAG_PARENT_CAN_ACCESS_MANAGED );
         } catch (IntentFilter.MalformedMimeTypeException e) {
             e.printStackTrace();
         }
@@ -269,7 +270,7 @@ public class BasicManagedProfileFragment extends Fragment
         }
         DevicePolicyManager manager =
             (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
-        manager.clearForwardingIntentFilters(BasicDeviceAdminReceiver.getComponentName(activity));
+        manager.clearCrossProfileIntentFilters(BasicDeviceAdminReceiver.getComponentName(activity));
     }
 
     /**
