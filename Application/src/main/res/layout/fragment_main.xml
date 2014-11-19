@@ -60,6 +60,12 @@
             android:layout_height="wrap_content"
             android:text="@string/set_chrome_restrictions" />
 
+        <Button
+            android:id="@+id/clear_chrome_restrictions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/clear_chrome_restrictions" />
+
         <!-- Intent Forwarding -->
 
         <Button

@@ -1,20 +1,15 @@
 Android BasicManagedProfile Sample
 ==============================
 
-Introduction
-------------
-
-This sample demonstrates how to create a managed profile. You can also learn how to
-enable or disable other apps and how to set restrictions to them. Intents can be
-configured to be forwarded between primary account and managed profile. Finally, you can
-wipe all the data associated with the profile.
-
-Note that there can only be one managed profile on a device.
+This sample demonstrates how to create a managed profile. You can also learn how to enable or
+disable other apps and how to set restrictions to them. Intents can be configured to be forwarded
+between primary account and managed profile. Finally, you can wipe all the data associated with the
+profile. Note that there can only be one managed profile on a device. 
 
 Pre-requisites
 --------------
 
-- Android SDK (L Preview)
+- Android SDK (L Developer Preview)
 - Android Build Tools v20
 - Android Support Repository
 
@@ -39,7 +34,7 @@ submitting a pull request through GitHub. Please see CONTRIBUTING.md for more de
 License
 -------
 
-Copyright 2014 The Android Open Source Project
+Copyright 2014 The Android Open Source Project, Inc.
 
 Licensed to the Apache Software Foundation (ASF) under one or more contributor
 license agreements.  See the NOTICE file distributed with this work for

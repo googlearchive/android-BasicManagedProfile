@@ -28,6 +28,13 @@
     <string name="toggle_calculator">Calculator in this profile: </string>
     <string name="toggle_chrome">Chrome in this profile:</string>
     <string name="set_chrome_restrictions">Set Chrome restrictions</string>
+    <string name="clear_chrome_restrictions">Clear Chrome restrictions</string>
     <string name="icon">Icon</string>
+    <string name="profile_name">Sample Managed Profile</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+    <string name="restrictions_set">Restrictions set.</string>
+    <string name="activity_not_found">No app can handle this intent.</string>
+    <string name="cleared">Cleared.</string>
 
 </resources>

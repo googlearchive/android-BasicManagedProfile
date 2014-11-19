@@ -20,11 +20,15 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.admin.DevicePolicyManager;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,8 +39,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import static android.app.admin.DevicePolicyManager.FLAG_TO_MANAGED_PROFILE;
-import static android.app.admin.DevicePolicyManager.FLAG_TO_PRIMARY_USER;
+import static android.app.admin.DevicePolicyManager.FLAG_MANAGED_CAN_ACCESS_PARENT;
+import static android.app.admin.DevicePolicyManager.FLAG_PARENT_CAN_ACCESS_MANAGED;
 
 /**
  * Provides several functions that are available in a managed profile. This includes
@@ -44,28 +48,37 @@ import static android.app.admin.DevicePolicyManager.FLAG_TO_PRIMARY_USER;
  * and wiping out all the data in the profile.
  */
 public class BasicManagedProfileFragment extends Fragment
-    implements View.OnClickListener,
-    CompoundButton.OnCheckedChangeListener {
+        implements View.OnClickListener,
+        CompoundButton.OnCheckedChangeListener {
 
-    /** Package names of calculator */
-    private static final String[] PACKAGE_NAMES_CALCULATOR = {
-            "com.android.calculator2"
-    };
+    /**
+     * Tag for logging.
+     */
+    private static final String TAG = "BasicManagedProfileFragment";
 
-    /** Package names of Chrome */
-    private static final String[] PACKAGE_NAMES_CHROME = {
-            "com.android.chrome",
-            "com.google.android.apps.chrome_dev",
-            "com.chrome.canary",
-            "com.chrome.beta",
-    };
+    /**
+     * Package name of calculator
+     */
+    private static final String PACKAGE_NAME_CALCULATOR = "com.android.calculator2";
 
+    /**
+     * Package name of Chrome
+     */
+    private static final String PACKAGE_NAME_CHROME = "com.android.chrome";
+
+    /**
+     * {@link Button} to remove this managed profile.
+     */
     private Button mButtonRemoveProfile;
 
-    /** Whether the calculator app is enabled in this profile */
+    /**
+     * Whether the calculator app is enabled in this profile
+     */
     private boolean mCalculatorEnabled;
 
-    /** Whether Chrome is enabled in this profile */
+    /**
+     * Whether Chrome is enabled in this profile
+     */
     private boolean mChromeEnabled;
 
     public BasicManagedProfileFragment() {
@@ -84,20 +97,35 @@ public class BasicManagedProfileFragment extends Fragment
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        // Gets an instance of DevicePolicyManager
-        DevicePolicyManager manager =
-            (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
         // Retrieves whether the calculator app is enabled in this profile
-        mCalculatorEnabled = !manager.isApplicationBlocked(
-            BasicDeviceAdminReceiver.getComponentName(activity), PACKAGE_NAMES_CALCULATOR[0]);
+        mCalculatorEnabled = isApplicationEnabled(PACKAGE_NAME_CALCULATOR);
         // Retrieves whether Chrome is enabled in this profile
-        mChromeEnabled = false;
-        for (String packageName : PACKAGE_NAMES_CHROME) {
-            if (!manager.isApplicationBlocked(
-                    BasicDeviceAdminReceiver.getComponentName(activity), packageName)) {
-                mChromeEnabled = true;
-                return;
+        mChromeEnabled = isApplicationEnabled(PACKAGE_NAME_CHROME);
+    }
+
+    /**
+     * Checks if the application is available in this profile.
+     *
+     * @param packageName The package name
+     * @return True if the application is available in this profile.
+     */
+    private boolean isApplicationEnabled(String packageName) {
+        Activity activity = getActivity();
+        PackageManager packageManager = activity.getPackageManager();
+        try {
+            ApplicationInfo applicationInfo = packageManager.getApplicationInfo(
+                    packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
+            // Return false if the app is not installed in this profile
+            if (0 == (applicationInfo.flags & ApplicationInfo.FLAG_INSTALLED)) {
+                return false;
             }
+            // Check if the app is not hidden in this profile
+            DevicePolicyManager devicePolicyManager =
+                    (DevicePolicyManager) activity.getSystemService(Activity.DEVICE_POLICY_SERVICE);
+            return !devicePolicyManager.isApplicationHidden(
+                    BasicDeviceAdminReceiver.getComponentName(activity), packageName);
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
         }
     }
 
@@ -105,6 +133,7 @@ public class BasicManagedProfileFragment extends Fragment
     public void onViewCreated(View view, Bundle savedInstanceState) {
         // Bind event listeners and initial states
         view.findViewById(R.id.set_chrome_restrictions).setOnClickListener(this);
+        view.findViewById(R.id.clear_chrome_restrictions).setOnClickListener(this);
         view.findViewById(R.id.enable_forwarding).setOnClickListener(this);
         view.findViewById(R.id.disable_forwarding).setOnClickListener(this);
         view.findViewById(R.id.send_intent).setOnClickListener(this);
@@ -123,6 +152,10 @@ public class BasicManagedProfileFragment extends Fragment
         switch (view.getId()) {
             case R.id.set_chrome_restrictions: {
                 setChromeRestrictions();
+                break;
+            }
+            case R.id.clear_chrome_restrictions: {
+                clearChromeRestrictions();
                 break;
             }
             case R.id.enable_forwarding: {
@@ -149,12 +182,12 @@ public class BasicManagedProfileFragment extends Fragment
     public void onCheckedChanged(CompoundButton compoundButton, boolean checked) {
         switch (compoundButton.getId()) {
             case R.id.toggle_calculator: {
-                setAppEnabled(PACKAGE_NAMES_CALCULATOR, checked);
+                setAppEnabled(PACKAGE_NAME_CALCULATOR, checked);
                 mCalculatorEnabled = checked;
                 break;
             }
             case R.id.toggle_chrome: {
-                setAppEnabled(PACKAGE_NAMES_CHROME, checked);
+                setAppEnabled(PACKAGE_NAME_CHROME, checked);
                 mChromeEnabled = checked;
                 break;
             }
@@ -164,22 +197,44 @@ public class BasicManagedProfileFragment extends Fragment
     /**
      * Enables or disables the specified app in this profile.
      *
-     * @param packageNames The package names of the target app.
-     * @param enabled Pass true to enable the app.
+     * @param packageName The package name of the target app.
+     * @param enabled     Pass true to enable the app.
      */
-    private void setAppEnabled(String[] packageNames, boolean enabled) {
+    private void setAppEnabled(String packageName, boolean enabled) {
         Activity activity = getActivity();
         if (null == activity) {
             return;
         }
-        DevicePolicyManager manager =
-            (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
-        for (String packageName : packageNames) {
-            // This is how you can enable or disable an app in a managed profile.
-            manager.setApplicationBlocked(BasicDeviceAdminReceiver.getComponentName(activity),
-                                          packageName, !enabled);
+        PackageManager packageManager = activity.getPackageManager();
+        DevicePolicyManager devicePolicyManager =
+                (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
+        try {
+            ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName,
+                    PackageManager.GET_UNINSTALLED_PACKAGES);
+            // Here, we check the ApplicationInfo of the target app, and see if the flags have
+            // ApplicationInfo.FLAG_INSTALLED turned on using bitwise operation.
+            if (0 == (applicationInfo.flags & ApplicationInfo.FLAG_INSTALLED)) {
+                // If the app is not installed in this profile, we can enable it by
+                // DPM.enableSystemApp
+                if (enabled) {
+                    devicePolicyManager.enableSystemApp(
+                            BasicDeviceAdminReceiver.getComponentName(activity), packageName);
+                } else {
+                    // But we cannot disable the app since it is already disabled
+                    Log.e(TAG, "Cannot disable this app: " + packageName);
+                    return;
+                }
+            } else {
+                // If the app is already installed, we can enable or disable it by
+                // DPM.setApplicationHidden
+                devicePolicyManager.setApplicationHidden(
+                        BasicDeviceAdminReceiver.getComponentName(activity), packageName, !enabled);
+            }
+            Toast.makeText(activity, enabled ? R.string.enabled : R.string.disabled,
+                    Toast.LENGTH_SHORT).show();
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "The app cannot be found: " + packageName, e);
         }
-        Toast.makeText(activity, enabled ? "Enabled" : "Disabled", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -222,18 +277,34 @@ public class BasicManagedProfileFragment extends Fragment
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        for (String packageName : PACKAGE_NAMES_CHROME) {
-                            // This is how you can set restrictions to an app.
-                            // The format for settings in Bundle differs from app to app.
-                            manager.setApplicationRestrictions
-                                    (BasicDeviceAdminReceiver.getComponentName(activity),
-                                    packageName, settings);
-                            Toast.makeText(activity, "Restrictions set.",
-                                    Toast.LENGTH_SHORT).show();
-                        }
+                        // This is how you can set restrictions to an app.
+                        // The format for settings in Bundle differs from app to app.
+                        manager.setApplicationRestrictions
+                                (BasicDeviceAdminReceiver.getComponentName(activity),
+                                        PACKAGE_NAME_CHROME, settings);
+                        Toast.makeText(activity, R.string.restrictions_set,
+                                Toast.LENGTH_SHORT).show();
                     }
                 })
                 .show();
+    }
+
+    /**
+     * Clears restrictions to Chrome
+     */
+    private void clearChromeRestrictions() {
+        final Activity activity = getActivity();
+        if (null == activity) {
+            return;
+        }
+        final DevicePolicyManager manager =
+                (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
+        // In order to clear restrictions, pass null as the restriction Bundle for
+        // setApplicationRestrictions
+        manager.setApplicationRestrictions
+                (BasicDeviceAdminReceiver.getComponentName(activity),
+                        PACKAGE_NAME_CHROME, null);
+        Toast.makeText(activity, R.string.cleared, Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -245,15 +316,14 @@ public class BasicManagedProfileFragment extends Fragment
             return;
         }
         DevicePolicyManager manager =
-            (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
+                (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
         try {
             IntentFilter filter = new IntentFilter(Intent.ACTION_SEND);
             filter.addDataType("text/plain");
             filter.addDataType("image/jpeg");
             // This is how you can register an IntentFilter as allowed pattern of Intent forwarding
-            manager.addForwardingIntentFilter(BasicDeviceAdminReceiver.getComponentName(activity),
-                                              filter,
-                                              FLAG_TO_PRIMARY_USER | FLAG_TO_MANAGED_PROFILE);
+            manager.addCrossProfileIntentFilter(BasicDeviceAdminReceiver.getComponentName(activity),
+                    filter, FLAG_MANAGED_CAN_ACCESS_PARENT | FLAG_PARENT_CAN_ACCESS_MANAGED);
         } catch (IntentFilter.MalformedMimeTypeException e) {
             e.printStackTrace();
         }
@@ -268,12 +338,13 @@ public class BasicManagedProfileFragment extends Fragment
             return;
         }
         DevicePolicyManager manager =
-            (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
-        manager.clearForwardingIntentFilters(BasicDeviceAdminReceiver.getComponentName(activity));
+                (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
+        manager.clearCrossProfileIntentFilters(BasicDeviceAdminReceiver.getComponentName(activity));
     }
 
     /**
-     * Sends a sample intent.
+     * Sends a sample intent of a plain text message.  This is just a utility function to see how
+     * the intent forwarding works.
      */
     private void sendIntent() {
         Activity activity = getActivity();
@@ -281,13 +352,18 @@ public class BasicManagedProfileFragment extends Fragment
             return;
         }
         DevicePolicyManager manager =
-            (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
+                (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
         intent.putExtra(Intent.EXTRA_TEXT,
-                        manager.isProfileOwnerApp(activity.getApplicationContext().getPackageName())
-                                ? "From the managed account" : "From the primary account");
-        startActivity(intent);
+                manager.isProfileOwnerApp(activity.getApplicationContext().getPackageName())
+                        ? "From the managed account" : "From the primary account");
+        try {
+            startActivity(intent);
+            Log.d(TAG, "A sample intent was sent.");
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(activity, R.string.activity_not_found, Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
@@ -299,7 +375,7 @@ public class BasicManagedProfileFragment extends Fragment
             return;
         }
         DevicePolicyManager manager =
-            (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
+                (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
         manager.wipeData(0);
         // The screen turns off here
     }

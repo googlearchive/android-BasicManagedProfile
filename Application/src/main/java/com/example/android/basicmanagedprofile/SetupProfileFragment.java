@@ -26,14 +26,14 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import static android.app.admin.DevicePolicyManager.ACTION_PROVISION_MANAGED_PROFILE;
-import static android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN;
-import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEFAULT_MANAGED_PROFILE_NAME;
 import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME;
 
 /**
  * This {@link Fragment} handles initiation of managed profile provisioning.
  */
 public class SetupProfileFragment extends Fragment implements View.OnClickListener {
+
+    private static final int REQUEST_PROVISION_MANAGED_PROFILE = 1;
 
     public static SetupProfileFragment newInstance() {
         return new SetupProfileFragment();
@@ -75,16 +75,26 @@ public class SetupProfileFragment extends Fragment implements View.OnClickListen
         Intent intent = new Intent(ACTION_PROVISION_MANAGED_PROFILE);
         intent.putExtra(EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME,
                         activity.getApplicationContext().getPackageName());
-        intent.putExtra(EXTRA_PROVISIONING_DEFAULT_MANAGED_PROFILE_NAME,
-                        "Sample Managed Profile");
-        intent.putExtra(EXTRA_DEVICE_ADMIN, BasicDeviceAdminReceiver.getComponentName(activity));
         if (intent.resolveActivity(activity.getPackageManager()) != null) {
-            startActivity(intent);
+            startActivityForResult(intent, REQUEST_PROVISION_MANAGED_PROFILE);
             activity.finish();
         } else {
             Toast.makeText(activity, "Device provisioning is not enabled. Stopping.",
                            Toast.LENGTH_SHORT).show();
         }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_PROVISION_MANAGED_PROFILE) {
+            if (resultCode == Activity.RESULT_OK) {
+                Toast.makeText(getActivity(), "Provisioning done.", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getActivity(), "Provisioning failed.", Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
 }

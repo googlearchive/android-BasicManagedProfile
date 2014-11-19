@@ -1,4 +1,1 @@
-
-
-
-include 'BasicManagedProfileSample'
+include 'Application'

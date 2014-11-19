@@ -18,6 +18,7 @@ package com.example.android.basicmanagedprofile;
 
 import android.app.Activity;
 import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -45,8 +46,11 @@ public class EnableProfileActivity extends Activity implements View.OnClickListe
     private void enableProfile() {
         DevicePolicyManager manager =
             (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+        ComponentName componentName = BasicDeviceAdminReceiver.getComponentName(this);
+        // This is the name for the newly created managed profile.
+        manager.setProfileName(componentName, getString(R.string.profile_name));
         // We enable the profile here.
-        manager.setProfileEnabled(BasicDeviceAdminReceiver.getComponentName(this));
+        manager.setProfileEnabled(componentName);
     }
 
     @Override
