@@ -9,8 +9,8 @@ profile. Note that there can only be one managed profile on a device.
 Pre-requisites
 --------------
 
-- Android SDK (L Developer Preview)
-- Android Build Tools v20
+- Android SDK
+- Android Build Tools v21
 - Android Support Repository
 
 Getting Started
