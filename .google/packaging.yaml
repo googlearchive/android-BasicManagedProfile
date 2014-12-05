@@ -5,8 +5,13 @@
 ---
 status:       PUBLISHED
 technologies: [Android]
-categories:   [Admin]
+categories:   [Device Admin]
 languages:    [Java]
 solutions:    [Mobile]
 github:       android-BasicManagedProfile
+level:        ADVANCED
+icon:         screenshotsicon-web.png
+apiRefs:
+    - android:android.app.admin.DevicePolicyManager
+    - android:android.app.admin.DeviceAdminReceiver
 license: apache2
