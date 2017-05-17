@@ -27,6 +27,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -54,7 +55,7 @@ public class BasicManagedProfileFragment extends Fragment
     /**
      * Tag for logging.
      */
-    private static final String TAG = "BasicManagedProfileFragment";
+    private static final String TAG = "ManagedProfileFragment";
 
     /**
      * Package name of calculator
@@ -95,8 +96,8 @@ public class BasicManagedProfileFragment extends Fragment
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
+    public void onAttach(Context context) {
+        super.onAttach(context);
         // Retrieves whether the calculator app is enabled in this profile
         mCalculatorEnabled = isApplicationEnabled(PACKAGE_NAME_CALCULATOR);
         // Retrieves whether Chrome is enabled in this profile
@@ -113,8 +114,15 @@ public class BasicManagedProfileFragment extends Fragment
         Activity activity = getActivity();
         PackageManager packageManager = activity.getPackageManager();
         try {
+            int packageFlags;
+            if(Build.VERSION.SDK_INT < 24){
+                //noinspection deprecation
+                packageFlags = PackageManager.GET_UNINSTALLED_PACKAGES;
+            }else{
+                packageFlags = PackageManager.MATCH_UNINSTALLED_PACKAGES;
+            }
             ApplicationInfo applicationInfo = packageManager.getApplicationInfo(
-                    packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
+                    packageName, packageFlags);
             // Return false if the app is not installed in this profile
             if (0 == (applicationInfo.flags & ApplicationInfo.FLAG_INSTALLED)) {
                 return false;
@@ -209,8 +217,15 @@ public class BasicManagedProfileFragment extends Fragment
         DevicePolicyManager devicePolicyManager =
                 (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
         try {
+            int packageFlags;
+            if(Build.VERSION.SDK_INT < 24){
+                //noinspection deprecation
+                packageFlags = PackageManager.GET_UNINSTALLED_PACKAGES;
+            }else{
+                packageFlags = PackageManager.MATCH_UNINSTALLED_PACKAGES;
+            }
             ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName,
-                    PackageManager.GET_UNINSTALLED_PACKAGES);
+                    packageFlags);
             // Here, we check the ApplicationInfo of the target app, and see if the flags have
             // ApplicationInfo.FLAG_INSTALLED turned on using bitwise operation.
             if (0 == (applicationInfo.flags & ApplicationInfo.FLAG_INSTALLED)) {

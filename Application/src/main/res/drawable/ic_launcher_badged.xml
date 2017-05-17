@@ -15,7 +15,7 @@
  limitations under the License.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/ic_launcher"/>
+    <item android:drawable="@mipmap/ic_launcher"/>
     <item
         android:top="56dp"
         android:left="56dp"

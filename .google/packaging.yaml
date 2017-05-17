@@ -11,7 +11,7 @@ languages:    [Java]
 solutions:    [Mobile]
 github:       android-BasicManagedProfile
 level:        ADVANCED
-icon:         screenshotsicon-web.png
+icon:         screenshots/icon-web.png
 apiRefs:
     - android:android.app.admin.DevicePolicyManager
     - android:android.app.admin.DeviceAdminReceiver

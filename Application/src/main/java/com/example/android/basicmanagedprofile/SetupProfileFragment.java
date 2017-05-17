@@ -18,15 +18,15 @@ package com.example.android.basicmanagedprofile;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
-import static android.app.admin.DevicePolicyManager.ACTION_PROVISION_MANAGED_PROFILE;
-import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME;
 
 /**
  * This {@link Fragment} handles initiation of managed profile provisioning.
@@ -72,9 +72,20 @@ public class SetupProfileFragment extends Fragment implements View.OnClickListen
         if (null == activity) {
             return;
         }
-        Intent intent = new Intent(ACTION_PROVISION_MANAGED_PROFILE);
-        intent.putExtra(EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME,
-                        activity.getApplicationContext().getPackageName());
+        Intent intent = new Intent(DevicePolicyManager.ACTION_PROVISION_MANAGED_PROFILE);
+
+        // Use a different intent extra below M to configure the admin component.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            //noinspection deprecation
+            intent.putExtra(DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME,
+                    activity.getApplicationContext().getPackageName());
+        } else {
+            final ComponentName component = new ComponentName(activity,
+                    BasicDeviceAdminReceiver.class.getName());
+            intent.putExtra(DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME,
+                    component);
+        }
+
         if (intent.resolveActivity(activity.getPackageManager()) != null) {
             startActivityForResult(intent, REQUEST_PROVISION_MANAGED_PROFILE);
             activity.finish();
